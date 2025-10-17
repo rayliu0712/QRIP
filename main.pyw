@@ -3,9 +3,19 @@ import wx
 import socket
 import psutil
 import qrcode
+import ipaddress
 import webbrowser
 from io import BytesIO
 from typing import NamedTuple
+
+V4_BLACKLIST = [
+    '127.0.0.0/8',
+    '169.254.0.0/16'  # link-local address
+]
+V6_BLACKLIST = [
+    '::1',
+    'fe80::/10'  # link-local address
+]
 
 
 class NameAddr(NamedTuple):
@@ -18,48 +28,6 @@ class AddrsKit(NamedTuple):
     choice: wx.Choice
     prompt: wx.StaticText
     qr: wx.StaticBitmap
-
-
-def start_QRIP():
-    if os.name == 'nt':
-        from ctypes import windll
-        windll.shcore.SetProcessDpiAwareness(True)
-
-    app = wx.App()
-    appFrame = AppFrame()
-    appFrame.Show()
-    app.MainLoop()
-
-
-def get_v4_v6_addrs() -> tuple[list[NameAddr], list[NameAddr]]:
-    v4_addrs = []
-    v6_addrs = []
-
-    stats = psutil.net_if_stats()
-
-    for name, snicaddrs in psutil.net_if_addrs().items():
-        # disabled
-        if not stats[name].isup:
-            continue
-
-        for snicaddr in snicaddrs:
-            family = snicaddr.family
-            addr = snicaddr.address
-
-            match family:
-                # MAC address
-                case psutil.AF_LINK:
-                    pass
-
-                case socket.AF_INET:
-                    if addr != '127.0.0.1':
-                        v4_addrs.append(NameAddr(name, addr))
-
-                case socket.AF_INET6:
-                    if addr != '::1':
-                        v6_addrs.append(NameAddr(name, addr))
-
-    return v4_addrs, v6_addrs
 
 
 class AppFrame(wx.Frame):
@@ -154,7 +122,7 @@ class AppFrame(wx.Frame):
             buffer = BytesIO()
             qrcode.make(f'QRIP {addrs[selection].addr}').save(buffer)
             buffer.seek(0)
-            
+
             image = wx.Image(buffer)
             bitmap = wx.Bitmap(image)
             qr.SetBitmap(bitmap)
@@ -179,7 +147,7 @@ class AppFrame(wx.Frame):
                     prompt.SetLabel('   NULL   ')
                     prompt.SetBackgroundColour(wx.Colour(0, 0, 0))
                 case 1:
-                    prompt.SetLabel('   ONE   ')
+                    prompt.SetLabel('   ONLY   ')
                     prompt.SetBackgroundColour(wx.Colour(0, 180, 0))
                 case _:
                     prompt.SetLabel('   MANY   ')
@@ -189,6 +157,55 @@ class AppFrame(wx.Frame):
             prompt.Update()
 
             self.make_addr_qr(i)
+
+
+def is_ip_in_network(ip_str: str, network_str: str) -> bool:
+    ip = ipaddress.ip_address(ip_str)
+    network = ipaddress.ip_network(network_str)
+
+    return ip in network
+
+
+def get_v4_v6_addrs() -> tuple[list[NameAddr], list[NameAddr]]:
+    v4_addrs = []
+    v6_addrs = []
+
+    stats = psutil.net_if_stats()
+
+    for name, snicaddrs in psutil.net_if_addrs().items():
+        # disabled
+        if not stats[name].isup:
+            continue
+
+        for snicaddr in snicaddrs:
+            family = snicaddr.family
+            addr = snicaddr.address
+
+            match family:
+                # MAC address
+                # case psutil.AF_LINK:
+                #     pass
+
+                case socket.AF_INET:
+                    if all(not is_ip_in_network(addr, network) for network in V4_BLACKLIST):
+                        v4_addrs.append(NameAddr(name, addr))
+
+                case socket.AF_INET6:
+                    if all(not is_ip_in_network(addr, network) for network in V6_BLACKLIST):
+                        v6_addrs.append(NameAddr(name, addr))
+
+    return v4_addrs, v6_addrs
+
+
+def start_QRIP():
+    if os.name == 'nt':
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(True)
+
+    app = wx.App()
+    appFrame = AppFrame()
+    appFrame.Show()
+    app.MainLoop()
 
 
 if __name__ == '__main__':
