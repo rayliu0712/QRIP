@@ -62,13 +62,6 @@ def get_v4_v6_addrs() -> tuple[list[NameAddr], list[NameAddr]]:
     return v4_addrs, v6_addrs
 
 
-def make_qr(data: str) -> BytesIO:
-    buffer = BytesIO()
-    qrcode.make(data).save(buffer)
-    buffer.seek(0)
-    return buffer
-
-
 class AppFrame(wx.Frame):
     def __init__(self):
         min_size = wx.Size(600, 600)
@@ -158,9 +151,10 @@ class AppFrame(wx.Frame):
         if selection == wx.NOT_FOUND:
             qr.SetBitmap(wx.NullBitmap)
         else:
-            addr = addrs[selection].addr
-            buffer = make_qr(f'QRIP {addr}')
-
+            buffer = BytesIO()
+            qrcode.make(f'QRIP {addrs[selection].addr}').save(buffer)
+            buffer.seek(0)
+            
             image = wx.Image(buffer)
             bitmap = wx.Bitmap(image)
             qr.SetBitmap(bitmap)
