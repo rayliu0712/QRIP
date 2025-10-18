@@ -36,7 +36,15 @@ class AppFrame(wx.Frame):
         super().__init__(None, title='QRIP', size=min_size)
         self.SetMinSize(min_size)
 
-        notebook = wx.Notebook(self)
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        panel.SetSizer(sizer)
+
+        #
+        # notebook
+
+        notebook = wx.Notebook(panel)
+        sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
 
         v4_panel = wx.Panel(notebook)
         notebook.AddPage(v4_panel, 'IPv4')
@@ -50,21 +58,31 @@ class AppFrame(wx.Frame):
         v6_prompt = wx.StaticText(v6_panel)
         v6_qr = wx.StaticBitmap(v6_panel)
 
-        about_panel = wx.Panel(notebook)
-        notebook.AddPage(about_panel, 'About')
-
         self.kits = (
             AddrsKit([], v4_choice, v4_prompt, v4_qr),
             AddrsKit([], v6_choice, v6_prompt, v6_qr),
         )
         self.make_addr_page(0, v4_panel)
         self.make_addr_page(1, v6_panel)
-        self.make_about_page(about_panel)
-        self.refresh_addr()
+        self.refresh_interfaces()
 
+        #
+        # refresh button
+
+        refresh_button = wx.Button(panel, label='Refresh (F5)')
+        sizer.Add(refresh_button, flag=wx.ALIGN_RIGHT | wx.ALL, border=10)
+        refresh_button.Bind(wx.EVT_BUTTON, lambda _: self.refresh_interfaces())
+
+        #
+        # status bar
+
+        status_bar = self.CreateStatusBar()
+        status_bar.SetStatusText(' © 2025 Ray Liu')
+
+        #
         # 無論 focus 在哪個子元件，都能捕捉到 refresh hotkey
         # accelerator 其實是模擬觸發 EVT_MENU 事件
-        self.Bind(wx.EVT_MENU, lambda _: self.refresh_addr())
+        self.Bind(wx.EVT_MENU, lambda _: self.refresh_interfaces())
         accel_table = wx.AcceleratorTable([
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F5)
         ])
@@ -76,40 +94,23 @@ class AppFrame(wx.Frame):
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
 
-        # hsizer start
+        # top_hsizer start
 
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        vsizer.Add(hsizer, flag=wx.EXPAND | wx.ALL, border=10)
+        top_hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        vsizer.Add(top_hsizer, flag=wx.EXPAND | wx.ALL, border=10)
 
         choice.Bind(
             wx.EVT_CHOICE,
             lambda _: self.make_addr_qr(whichKit)
         )
-        hsizer.Add(choice, proportion=1, flag=wx.RIGHT, border=10)
+        top_hsizer.Add(choice, proportion=1, flag=wx.RIGHT, border=10)
 
         prompt.SetForegroundColour(wx.Colour(255, 255, 255))
-        hsizer.Add(prompt)
+        top_hsizer.Add(prompt)
 
-        # hsizer end
+        # top_hsizer end
 
         vsizer.Add(qr, proportion=1)
-
-        refresh_button = wx.Button(panel, label='Refresh (F5)')
-        refresh_button.Bind(wx.EVT_BUTTON, lambda _: self.refresh_addr())
-        vsizer.Add(refresh_button, flag=wx.ALIGN_RIGHT | wx.ALL, border=10)
-
-    def make_about_page(self, panel: wx.Panel):
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        panel.SetSizer(sizer)
-
-        button = wx.Button(panel, label='GitHub Repo')
-        button.Bind(
-            wx.EVT_BUTTON,
-            lambda _: webbrowser.open('https://github.com/rayliu0712/QRIP')
-        )
-        sizer.AddStretchSpacer()
-        sizer.Add(button, flag=wx.ALIGN_CENTER_HORIZONTAL)
-        sizer.AddStretchSpacer()
 
     def make_addr_qr(self, whichKit: int):
         addrs, choice, _, qr = self.kits[whichKit]
@@ -119,15 +120,21 @@ class AppFrame(wx.Frame):
         if selection == wx.NOT_FOUND:
             qr.SetBitmap(wx.NullBitmap)
         else:
+            addr = addrs[selection].addr
+
+            # IPv6
+            if whichKit == 1:
+                addr = f'[{addr}]'
+
             buffer = BytesIO()
-            qrcode.make(f'QRIP {addrs[selection].addr}').save(buffer)
+            qrcode.make(f'QRIP {addr}').save(buffer)
             buffer.seek(0)
 
             image = wx.Image(buffer)
             bitmap = wx.Bitmap(image)
             qr.SetBitmap(bitmap)
 
-    def refresh_addr(self):
+    def refresh_interfaces(self):
         new_v4_v6_addrs = get_v4_v6_addrs()
 
         for i in range(2):
@@ -138,7 +145,7 @@ class AppFrame(wx.Frame):
 
             choice.Clear()
             choice.Append([
-                f'{name} ({addr})' for name, addr in addrs
+                f'{name} [{addr}]' for name, addr in addrs
             ])
             choice.SetSelection(0)
 
