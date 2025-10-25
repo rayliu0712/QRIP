@@ -3,36 +3,23 @@ import wx
 import socket
 import psutil
 import qrcode
-import ipaddress
-import webbrowser
 from io import BytesIO
-from typing import NamedTuple
+from ipaddress import IPv4Interface, IPv6Interface, IPv4Network, IPv6Network
 
 V4_BLACKLIST = [
     '127.0.0.0/8',
     '169.254.0.0/16'  # link-local address
 ]
+
 V6_BLACKLIST = [
     '::1',
     'fe80::/10'  # link-local address
 ]
 
 
-class NameAddr(NamedTuple):
-    name: str
-    addr: str
-
-
-class AddrsKit(NamedTuple):
-    addrs: list[NameAddr]
-    choice: wx.Choice
-    prompt: wx.StaticText
-    qr: wx.StaticBitmap
-
-
 class AppFrame(wx.Frame):
     def __init__(self):
-        min_size = wx.Size(600, 600)
+        min_size = wx.Size(650, 650)
         super().__init__(None, title='QRIP', size=min_size)
         self.SetMinSize(min_size)
 
@@ -40,153 +27,165 @@ class AppFrame(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(sizer)
 
-        #
-        # notebook
-
         notebook = wx.Notebook(panel)
-        sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
+        notebook.AddPage(self.make_v4_page(notebook), 'IPv4')
+        notebook.AddPage(self.make_v6_page(notebook), 'IPv6')
+        sizer.Add(notebook, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
-        v4_panel = wx.Panel(notebook)
-        notebook.AddPage(v4_panel, 'IPv4')
-        v4_choice = wx.Choice(v4_panel)
-        v4_prompt = wx.StaticText(v4_panel)
-        v4_qr = wx.StaticBitmap(v4_panel)
-
-        v6_panel = wx.Panel(notebook)
-        notebook.AddPage(v6_panel, 'IPv6')
-        v6_choice = wx.Choice(v6_panel)
-        v6_prompt = wx.StaticText(v6_panel)
-        v6_qr = wx.StaticBitmap(v6_panel)
-
-        self.kits = (
-            AddrsKit([], v4_choice, v4_prompt, v4_qr),
-            AddrsKit([], v6_choice, v6_prompt, v6_qr),
+        button = wx.Button(panel, label='Refresh (F5)')
+        button.Bind(wx.EVT_BUTTON, lambda _: self.refresh_ifs())
+        sizer.Add(
+            button,
+            flag=wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            border=10
         )
-        self.make_addr_page(0, v4_panel)
-        self.make_addr_page(1, v6_panel)
-        self.refresh_interfaces()
-
-        #
-        # refresh button
-
-        refresh_button = wx.Button(panel, label='Refresh (F5)')
-        sizer.Add(refresh_button, flag=wx.ALIGN_RIGHT | wx.ALL, border=10)
-        refresh_button.Bind(wx.EVT_BUTTON, lambda _: self.refresh_interfaces())
-
-        #
-        # status bar
-
-        status_bar = self.CreateStatusBar()
-        status_bar.SetStatusText(' © 2025 Ray Liu')
 
         #
         # 無論 focus 在哪個子元件，都能捕捉到 refresh hotkey
         # accelerator 其實是模擬觸發 EVT_MENU 事件
-        self.Bind(wx.EVT_MENU, lambda _: self.refresh_interfaces())
+        self.Bind(wx.EVT_MENU, lambda _: self.refresh_ifs())
         accel_table = wx.AcceleratorTable([
             wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F5)
         ])
         self.SetAcceleratorTable(accel_table)
 
-    def make_addr_page(self, whichKit: int, panel: wx.Panel):
-        _, choice, prompt, qr = self.kits[whichKit]
+        self.refresh_ifs()
 
+    def make_bitmap(self, data: str) -> wx.Bitmap:
+        buffer = BytesIO()
+        qrcode.make(f'[QRIP] {data}').save(buffer)
+        buffer.seek(0)
+
+        image = wx.Image(buffer)
+        return wx.Bitmap(image)
+
+    def make_v4_page(self, notebook: wx.Notebook) -> wx.Panel:
+        panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
 
-        # top_hsizer start
+        #
+        # hsizer start
 
-        top_hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        vsizer.Add(top_hsizer, flag=wx.EXPAND | wx.ALL, border=10)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        vsizer.Add(hsizer, flag=wx.EXPAND | wx.ALL, border=10)
 
-        choice.Bind(
-            wx.EVT_CHOICE,
-            lambda _: self.make_addr_qr(whichKit)
+        self.v4_choice = wx.Choice(panel)
+        self.v4_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v4_qr_text())
+        hsizer.Add(self.v4_choice, proportion=1)
+        hsizer.AddStretchSpacer()
+
+        # hsizer end
+        #
+
+        self.v4_qr = wx.StaticBitmap(panel)
+        vsizer.Add(self.v4_qr, proportion=1, flag=wx.EXPAND)
+
+        self.v4_text = wx.StaticText(panel)
+        vsizer.Add(
+            self.v4_text,
+            flag=wx.ALIGN_LEFT | wx.LEFT,
+            border=10
         )
-        top_hsizer.Add(choice, proportion=1, flag=wx.RIGHT, border=10)
 
-        prompt.SetForegroundColour(wx.Colour(255, 255, 255))
-        top_hsizer.Add(prompt)
+        return panel
 
-        # top_hsizer end
+    def make_v6_page(self, notebook: wx.Notebook) -> wx.Panel:
+        panel = wx.Panel(notebook)
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        panel.SetSizer(vsizer)
 
-        vsizer.Add(qr, proportion=1)
+        #
+        # hsizer start
 
-    def make_addr_qr(self, whichKit: int):
-        addrs, choice, _, qr = self.kits[whichKit]
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        vsizer.Add(hsizer, flag=wx.EXPAND | wx.ALL, border=10)
 
-        selection = choice.GetSelection()
+        self.v6_choice = wx.Choice(panel)
+        self.v6_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v6_qr_text())
+        hsizer.Add(self.v6_choice, proportion=1)
+        hsizer.AddStretchSpacer()
 
-        if selection == wx.NOT_FOUND:
-            qr.SetBitmap(wx.NullBitmap)
+        # hsizer end
+        #
+
+        self.v6_qr = wx.StaticBitmap(panel)
+        vsizer.Add(self.v6_qr, proportion=1, flag=wx.EXPAND)
+
+        self.v6_text = wx.StaticText(panel)
+        vsizer.Add(
+            self.v6_text,
+            flag=wx.ALIGN_LEFT | wx.LEFT,
+            border=10
+        )
+
+        return panel
+
+    def make_v4_qr_text(self):
+        selection = self.v4_choice.GetStringSelection()
+
+        if selection == '':
+            self.v4_qr.SetBitmap(wx.NullBitmap)
+            self.v4_text.SetLabel('')
         else:
-            addr = addrs[selection].addr
+            v4if = self.v4_ifs[selection]
+            self.v4_text.SetLabel(str(v4if))
 
-            # IPv6
-            if whichKit == 1:
-                addr = f'[{addr}]'
+            bitmap = self.make_bitmap(str(v4if.ip))
+            self.v4_qr.SetBitmap(bitmap)
 
-            buffer = BytesIO()
-            qrcode.make(f'QRIP {addr}').save(buffer)
-            buffer.seek(0)
+    def make_v6_qr_text(self):
+        selection = self.v6_choice.GetStringSelection()
 
-            image = wx.Image(buffer)
-            bitmap = wx.Bitmap(image)
-            qr.SetBitmap(bitmap)
+        if selection == '':
+            self.v6_qr.SetBitmap(wx.NullBitmap)
+            self.v6_text.SetLabel('')
+        else:
+            v6if = self.v6_ifs[selection]
+            self.v6_text.SetLabel(str(v6if))
 
-    def refresh_interfaces(self):
-        new_v4_v6_addrs = get_v4_v6_addrs()
+            bitmap = self.make_bitmap(str(v6if.ip))
+            self.v6_qr.SetBitmap(bitmap)
 
-        for i in range(2):
-            addrs, choice, prompt, _ = self.kits[i]
+    def refresh_ifs(self):
+        self.v4_ifs, self.v6_ifs = get_v4_v6_ifs()
 
-            addrs.clear()
-            addrs.extend(new_v4_v6_addrs[i])
+        self.v4_choice.Clear()
+        self.v4_choice.Append(list(self.v4_ifs.keys()))
+        self.v4_choice.SetSelection(0)
+        self.make_v4_qr_text()
 
-            choice.Clear()
-            choice.Append([
-                f'{name} [{addr}]' for name, addr in addrs
-            ])
-            choice.SetSelection(0)
-
-            match len(addrs):
-                case 0:
-                    prompt.SetLabel('   NULL   ')
-                    prompt.SetBackgroundColour(wx.Colour(0, 0, 0))
-                case 1:
-                    prompt.SetLabel('   ONLY   ')
-                    prompt.SetBackgroundColour(wx.Colour(0, 180, 0))
-                case _:
-                    prompt.SetLabel('   MANY   ')
-                    prompt.SetBackgroundColour(wx.Colour(180, 0, 0))
-
-            prompt.Refresh()
-            prompt.Update()
-
-            self.make_addr_qr(i)
+        self.v6_choice.Clear()
+        self.v6_choice.Append(list(self.v6_ifs.keys()))
+        self.v6_choice.SetSelection(0)
+        self.make_v6_qr_text()
 
 
-def is_ip_in_network(ip_str: str, network_str: str) -> bool:
-    ip = ipaddress.ip_address(ip_str)
-    network = ipaddress.ip_network(network_str)
-
-    return ip in network
+def is_allowed_v4(v4if: IPv4Interface) -> bool:
+    return all(not v4if in IPv4Network(addr) for addr in V4_BLACKLIST)
 
 
-def get_v4_v6_addrs() -> tuple[list[NameAddr], list[NameAddr]]:
-    v4_addrs = []
-    v6_addrs = []
+def is_allowed_v6(v6if: IPv6Interface) -> bool:
+    return all(not v6if in IPv6Network(addr) for addr in V6_BLACKLIST)
 
-    stats = psutil.net_if_stats()
 
-    for name, snicaddrs in psutil.net_if_addrs().items():
+def get_v4_v6_ifs() -> tuple[dict[str, IPv4Interface], dict[str, IPv6Interface]]:
+    v4_ifs = {}
+    v6_ifs = {}
+
+    net_addrs = psutil.net_if_addrs()
+    net_stats = psutil.net_if_stats()
+
+    for name, snicaddr_list in net_addrs.items():
+
         # disabled
-        if not stats[name].isup:
+        if not net_stats[name].isup:
             continue
 
-        for snicaddr in snicaddrs:
-            family = snicaddr.family
-            addr = snicaddr.address
+        this_v4s = []
+        this_v6s = []
+
+        for family, addr, mask, _, _ in snicaddr_list:
 
             match family:
                 # MAC address
@@ -194,14 +193,32 @@ def get_v4_v6_addrs() -> tuple[list[NameAddr], list[NameAddr]]:
                 #     pass
 
                 case socket.AF_INET:
-                    if all(not is_ip_in_network(addr, network) for network in V4_BLACKLIST):
-                        v4_addrs.append(NameAddr(name, addr))
+                    v4if = IPv4Interface(f'{addr}/{mask}')
+                    if is_allowed_v4(v4if):
+                        this_v4s.append(v4if)
 
                 case socket.AF_INET6:
-                    if all(not is_ip_in_network(addr, network) for network in V6_BLACKLIST):
-                        v6_addrs.append(NameAddr(name, addr))
+                    v6if = IPv6Interface(f'{addr}/64')
+                    if is_allowed_v6(v6if):
+                        this_v6s.append(v6if)
 
-    return v4_addrs, v6_addrs
+        this_v4s_len = len(this_v4s)
+        if this_v4s_len == 1:
+            v4_ifs[name] = this_v4s[0]
+        elif this_v4s_len > 1:
+            v4_ifs.update({
+                f'{name} ({i+1})': this_v4s[i] for i in range(this_v4s_len)
+            })
+
+        this_v6s_len = len(this_v6s)
+        if this_v6s_len == 1:
+            v6_ifs[name] = this_v6s[0]
+        elif this_v6s_len > 1:
+            v6_ifs.update({
+                f'{name} ({i+1})': this_v6s[i] for i in range(this_v6s_len)
+            })
+
+    return v4_ifs, v6_ifs
 
 
 def start_QRIP():
