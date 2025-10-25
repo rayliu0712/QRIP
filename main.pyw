@@ -19,7 +19,7 @@ V6_BLACKLIST = [
 
 class AppFrame(wx.Frame):
     def __init__(self):
-        min_size = wx.Size(650, 650)
+        min_size = wx.Size(700, 700)
         super().__init__(None, title='QRIP', size=min_size)
         self.SetMinSize(min_size)
 
@@ -70,14 +70,26 @@ class AppFrame(wx.Frame):
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
 
+        self.v4_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.v4_prompt.SetFont(font)
+        vsizer.Add(
+            self.v4_prompt,
+            flag=wx.EXPAND | wx.ALL,
+            border=10
+        )
+
         #
         # hsizer start
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        vsizer.Add(hsizer, flag=wx.EXPAND | wx.ALL, border=10)
+        vsizer.Add(
+            hsizer,
+            flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            border=10
+        )
 
         self.v4_choice = wx.Choice(panel)
-        self.v4_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v4_qr_text())
+        self.v4_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v4_qr_prompt())
         hsizer.Add(self.v4_choice, proportion=1)
         hsizer.AddStretchSpacer()
 
@@ -87,37 +99,12 @@ class AppFrame(wx.Frame):
         self.v4_qr = wx.StaticBitmap(panel)
         vsizer.Add(self.v4_qr, proportion=1, flag=wx.EXPAND)
 
-        self.v4_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
-        self.v4_prompt.SetFont(font)
-        vsizer.Add(
-            self.v4_prompt,
-            flag=wx.EXPAND | wx.ALL,
-            border=10
-        )
-
         return panel
 
     def make_v6_page(self, notebook: wx.Notebook, font: wx.Font) -> wx.Panel:
         panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
-
-        #
-        # hsizer start
-
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        vsizer.Add(hsizer, flag=wx.EXPAND | wx.ALL, border=10)
-
-        self.v6_choice = wx.Choice(panel)
-        self.v6_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v6_qr_text())
-        hsizer.Add(self.v6_choice, proportion=1)
-        hsizer.AddStretchSpacer()
-
-        # hsizer end
-        #
-
-        self.v6_qr = wx.StaticBitmap(panel)
-        vsizer.Add(self.v6_qr, proportion=1, flag=wx.EXPAND)
 
         self.v6_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
         self.v6_prompt.SetFont(font)
@@ -127,9 +114,30 @@ class AppFrame(wx.Frame):
             border=10
         )
 
+        #
+        # hsizer start
+
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        vsizer.Add(
+            hsizer,
+            flag=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            border=10
+        )
+
+        self.v6_choice = wx.Choice(panel)
+        self.v6_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v6_qr_prompt())
+        hsizer.Add(self.v6_choice, proportion=1)
+        hsizer.AddStretchSpacer()
+
+        # hsizer end
+        #
+
+        self.v6_qr = wx.StaticBitmap(panel)
+        vsizer.Add(self.v6_qr, proportion=1, flag=wx.EXPAND)
+
         return panel
 
-    def make_v4_qr_text(self):
+    def make_v4_qr_prompt(self):
         selection = self.v4_choice.GetStringSelection()
 
         if selection == '':
@@ -142,7 +150,7 @@ class AppFrame(wx.Frame):
             bitmap = self.make_bitmap(str(v4if.ip))
             self.v4_qr.SetBitmap(bitmap)
 
-    def make_v6_qr_text(self):
+    def make_v6_qr_prompt(self):
         selection = self.v6_choice.GetStringSelection()
 
         if selection == '':
@@ -161,12 +169,12 @@ class AppFrame(wx.Frame):
         self.v4_choice.Clear()
         self.v4_choice.Append(list(self.v4_ifs.keys()))
         self.v4_choice.SetSelection(0)
-        self.make_v4_qr_text()
+        self.make_v4_qr_prompt()
 
         self.v6_choice.Clear()
         self.v6_choice.Append(list(self.v6_ifs.keys()))
         self.v6_choice.SetSelection(0)
-        self.make_v6_qr_text()
+        self.make_v6_qr_prompt()
 
 
 def is_allowed_v4(v4if: IPv4Interface) -> bool:
