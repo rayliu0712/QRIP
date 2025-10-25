@@ -27,9 +27,15 @@ class AppFrame(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(sizer)
 
+        font = wx.Font(
+            10,
+            wx.FONTFAMILY_TELETYPE,
+            wx.FONTSTYLE_NORMAL,
+            wx.FONTWEIGHT_NORMAL
+        )
         notebook = wx.Notebook(panel)
-        notebook.AddPage(self.make_v4_page(notebook), 'IPv4')
-        notebook.AddPage(self.make_v6_page(notebook), 'IPv6')
+        notebook.AddPage(self.make_v4_page(notebook, font), 'IPv4')
+        notebook.AddPage(self.make_v6_page(notebook, font), 'IPv6')
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
         button = wx.Button(panel, label='Refresh (F5)')
@@ -59,7 +65,7 @@ class AppFrame(wx.Frame):
         image = wx.Image(buffer)
         return wx.Bitmap(image)
 
-    def make_v4_page(self, notebook: wx.Notebook) -> wx.Panel:
+    def make_v4_page(self, notebook: wx.Notebook, font: wx.Font) -> wx.Panel:
         panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
@@ -81,16 +87,17 @@ class AppFrame(wx.Frame):
         self.v4_qr = wx.StaticBitmap(panel)
         vsizer.Add(self.v4_qr, proportion=1, flag=wx.EXPAND)
 
-        self.v4_text = wx.StaticText(panel)
+        self.v4_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.v4_prompt.SetFont(font)
         vsizer.Add(
-            self.v4_text,
-            flag=wx.ALIGN_LEFT | wx.LEFT,
+            self.v4_prompt,
+            flag=wx.EXPAND | wx.ALL,
             border=10
         )
 
         return panel
 
-    def make_v6_page(self, notebook: wx.Notebook) -> wx.Panel:
+    def make_v6_page(self, notebook: wx.Notebook, font: wx.Font) -> wx.Panel:
         panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vsizer)
@@ -112,10 +119,11 @@ class AppFrame(wx.Frame):
         self.v6_qr = wx.StaticBitmap(panel)
         vsizer.Add(self.v6_qr, proportion=1, flag=wx.EXPAND)
 
-        self.v6_text = wx.StaticText(panel)
+        self.v6_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.v6_prompt.SetFont(font)
         vsizer.Add(
-            self.v6_text,
-            flag=wx.ALIGN_LEFT | wx.LEFT,
+            self.v6_prompt,
+            flag=wx.EXPAND | wx.ALL,
             border=10
         )
 
@@ -126,10 +134,10 @@ class AppFrame(wx.Frame):
 
         if selection == '':
             self.v4_qr.SetBitmap(wx.NullBitmap)
-            self.v4_text.SetLabel('')
+            self.v4_prompt.SetValue('')
         else:
             v4if = self.v4_ifs[selection]
-            self.v4_text.SetLabel(str(v4if))
+            self.v4_prompt.SetValue(str(v4if))
 
             bitmap = self.make_bitmap(str(v4if.ip))
             self.v4_qr.SetBitmap(bitmap)
@@ -139,10 +147,10 @@ class AppFrame(wx.Frame):
 
         if selection == '':
             self.v6_qr.SetBitmap(wx.NullBitmap)
-            self.v6_text.SetLabel('')
+            self.v6_prompt.SetValue('')
         else:
             v6if = self.v6_ifs[selection]
-            self.v6_text.SetLabel(str(v6if))
+            self.v6_prompt.SetValue(str(v6if))
 
             bitmap = self.make_bitmap(str(v6if.ip))
             self.v6_qr.SetBitmap(bitmap)
