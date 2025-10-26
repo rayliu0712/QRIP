@@ -61,7 +61,7 @@ class AppFrame(wx.Frame):
 
     def make_bitmap(self, data: str) -> wx.Bitmap:
         buffer = BytesIO()
-        qrcode.make(f'[QRIP] {data}').save(buffer)
+        qrcode.make(f'(QRIP){data}').save(buffer)  # QRIP identifier
         buffer.seek(0)
 
         image = wx.Image(buffer)
@@ -143,9 +143,9 @@ class AppFrame(wx.Frame):
             self.v4_qr.SetBitmap(wx.NullBitmap)
         else:
             v4if = self.v4_ifs[selection]
-            self.v4_prompt.SetValue(str(v4if))
+            self.v4_prompt.SetValue(f'{v4if}')
 
-            bitmap = self.make_bitmap(str(v4if.ip))
+            bitmap = self.make_bitmap(f'{v4if.ip}')
             self.v4_qr.SetBitmap(bitmap)
 
         self.v4_panel.Layout()
@@ -158,9 +158,9 @@ class AppFrame(wx.Frame):
             self.v6_qr.SetBitmap(wx.NullBitmap)
         else:
             v6if = self.v6_ifs[selection]
-            self.v6_prompt.SetValue(str(v6if))
+            self.v6_prompt.SetValue(f'{v6if}')
 
-            bitmap = self.make_bitmap(str(v6if.ip))
+            bitmap = self.make_bitmap(f'[{v6if.ip}]')
             self.v6_qr.SetBitmap(bitmap)
 
         self.v6_panel.Layout()
