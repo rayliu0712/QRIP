@@ -34,8 +34,10 @@ class AppFrame(wx.Frame):
             wx.FONTWEIGHT_NORMAL
         )
         notebook = wx.Notebook(panel)
-        notebook.AddPage(self.make_v4_page(notebook, font), 'IPv4')
-        notebook.AddPage(self.make_v6_page(notebook, font), 'IPv6')
+        self.make_v4_page(notebook, font)
+        self.make_v6_page(notebook, font)
+        notebook.AddPage(self.v4_panel, 'IPv4')
+        notebook.AddPage(self.v6_panel, 'IPv6')
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
         button = wx.Button(panel, label='Refresh (F5)')
@@ -65,12 +67,12 @@ class AppFrame(wx.Frame):
         image = wx.Image(buffer)
         return wx.Bitmap(image)
 
-    def make_v4_page(self, notebook: wx.Notebook, font: wx.Font) -> wx.Panel:
-        panel = wx.Panel(notebook)
+    def make_v4_page(self, notebook: wx.Notebook, font: wx.Font):
+        self.v4_panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
-        panel.SetSizer(vsizer)
+        self.v4_panel.SetSizer(vsizer)
 
-        self.v4_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.v4_prompt = wx.TextCtrl(self.v4_panel, style=wx.TE_READONLY)
         self.v4_prompt.SetFont(font)
         vsizer.Add(
             self.v4_prompt,
@@ -88,7 +90,7 @@ class AppFrame(wx.Frame):
             border=10
         )
 
-        self.v4_choice = wx.Choice(panel)
+        self.v4_choice = wx.Choice(self.v4_panel)
         self.v4_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v4_qr_prompt())
         hsizer.Add(self.v4_choice, proportion=1)
         hsizer.AddStretchSpacer()
@@ -96,17 +98,15 @@ class AppFrame(wx.Frame):
         # hsizer end
         #
 
-        self.v4_qr = wx.StaticBitmap(panel)
+        self.v4_qr = wx.StaticBitmap(self.v4_panel)
         vsizer.Add(self.v4_qr, proportion=1, flag=wx.EXPAND)
 
-        return panel
-
-    def make_v6_page(self, notebook: wx.Notebook, font: wx.Font) -> wx.Panel:
-        panel = wx.Panel(notebook)
+    def make_v6_page(self, notebook: wx.Notebook, font: wx.Font):
+        self.v6_panel = wx.Panel(notebook)
         vsizer = wx.BoxSizer(wx.VERTICAL)
-        panel.SetSizer(vsizer)
+        self.v6_panel.SetSizer(vsizer)
 
-        self.v6_prompt = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.v6_prompt = wx.TextCtrl(self.v6_panel, style=wx.TE_READONLY)
         self.v6_prompt.SetFont(font)
         vsizer.Add(
             self.v6_prompt,
@@ -124,7 +124,7 @@ class AppFrame(wx.Frame):
             border=10
         )
 
-        self.v6_choice = wx.Choice(panel)
+        self.v6_choice = wx.Choice(self.v6_panel)
         self.v6_choice.Bind(wx.EVT_CHOICE, lambda _: self.make_v6_qr_prompt())
         hsizer.Add(self.v6_choice, proportion=1)
         hsizer.AddStretchSpacer()
@@ -132,17 +132,15 @@ class AppFrame(wx.Frame):
         # hsizer end
         #
 
-        self.v6_qr = wx.StaticBitmap(panel)
+        self.v6_qr = wx.StaticBitmap(self.v6_panel)
         vsizer.Add(self.v6_qr, proportion=1, flag=wx.EXPAND)
-
-        return panel
 
     def make_v4_qr_prompt(self):
         selection = self.v4_choice.GetStringSelection()
 
         if selection == '':
-            self.v4_qr.SetBitmap(wx.NullBitmap)
             self.v4_prompt.SetValue('')
+            self.v4_qr.SetBitmap(wx.NullBitmap)
         else:
             v4if = self.v4_ifs[selection]
             self.v4_prompt.SetValue(str(v4if))
@@ -150,18 +148,22 @@ class AppFrame(wx.Frame):
             bitmap = self.make_bitmap(str(v4if.ip))
             self.v4_qr.SetBitmap(bitmap)
 
+        self.v4_panel.Layout()
+
     def make_v6_qr_prompt(self):
         selection = self.v6_choice.GetStringSelection()
 
         if selection == '':
-            self.v6_qr.SetBitmap(wx.NullBitmap)
             self.v6_prompt.SetValue('')
+            self.v6_qr.SetBitmap(wx.NullBitmap)
         else:
             v6if = self.v6_ifs[selection]
             self.v6_prompt.SetValue(str(v6if))
 
             bitmap = self.make_bitmap(str(v6if.ip))
             self.v6_qr.SetBitmap(bitmap)
+
+        self.v6_panel.Layout()
 
     def refresh_ifs(self):
         self.v4_ifs, self.v6_ifs = get_v4_v6_ifs()
