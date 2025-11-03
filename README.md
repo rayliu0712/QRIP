@@ -1,12 +1,20 @@
 # QRIP
 
-## Data Example
+## Data Format
 
-| IPv4 | IPv6 |
+Data starts with the identifier `(QRIP)`, followed by an IP address.
+
+| IPv4 Example | IPv6 Example |
 | --- | --- |
 | `(QRIP)123.45.67.89` | `(QRIP)[0123:4567:89ab:cdef::]` |
 
-data always starts with identifier `(QRIP)`
+## Usage Example
+
+```py
+from .qrip import start_QRIP
+
+start_QRIP()
+```
 
 ## Blacklist
 
