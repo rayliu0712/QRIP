@@ -253,10 +253,12 @@ def start_QRIP():
 
 def start_QRIP_daemon():
     '''
-    On Windows, multiprocessing always uses 'spawn',
-    which imports the main module to start the child process.
-    If not protected by `if __name__ == '__main__'`,
-    it will recursively start new processes and crash.
+    **On Windows**,
+    the multiprocessing module always uses the "spawn" start method,
+    which re-imports the main module to create the child process.
+
+    **If the code is not protected by `if __name__ == '__main__':`,
+    it will recursively spawn new processes and eventually crash.**
     '''
     proc = Process(target=start_QRIP, daemon=True)
     proc.start()
