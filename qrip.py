@@ -5,6 +5,7 @@ import psutil
 import qrcode
 from io import BytesIO
 from ipaddress import IPv4Interface, IPv6Interface, IPv4Network, IPv6Network
+from multiprocessing import Process
 
 V4_BLACKLIST = [
     '127.0.0.0/8',
@@ -248,6 +249,17 @@ def start_QRIP():
     appFrame = AppFrame()
     appFrame.Show()
     app.MainLoop()
+
+
+def start_QRIP_daemon():
+    '''
+    On Windows, multiprocessing always uses 'spawn',
+    which imports the main module to start the child process.
+    If not protected by `if __name__ == '__main__'`,
+    it will recursively start new processes and crash.
+    '''
+    proc = Process(target=start_QRIP, daemon=True)
+    proc.start()
 
 
 if __name__ == '__main__':

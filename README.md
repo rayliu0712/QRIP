@@ -10,10 +10,27 @@ Data starts with the identifier `(QRIP)`, followed by an IP address.
 
 ## Usage Example
 
-```py
-from .qrip import start_QRIP
+`start_QRIP_daemon()` uses *multiprocessing* to launch a separate child process.
 
-start_QRIP()
+**On Windows**, multiprocessing always uses "spawn", which imports the main module to start the child process.
+
+**If not protected by `if __name__ == '__main__'`, it will recursively start new processes and crash.**
+
+```py
+from qrip import start_QRIP_daemon
+from fastapi import FastAPI
+import uvicorn
+
+if __name__ == '__main__':
+    start_QRIP_daemon()
+
+    app = FastAPI()
+
+    @app.get("/")
+    async def read_root():
+        return {'message': 'Hello World'}
+
+    uvicorn.run(app, host='::')
 ```
 
 ## Blacklist
