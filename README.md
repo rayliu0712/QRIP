@@ -8,7 +8,7 @@ QRIP shows QR codes for all local IP addresses, allowing mobile devices to scan 
 
 ## Requirements
 
-Python 3 and the following modules:
+Python 3.7+ and the following modules:
 
 ```
 wxPython
