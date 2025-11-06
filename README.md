@@ -1,5 +1,32 @@
 # QRIP
 
+## Overview
+
+QRIP shows QR codes for all local IP addresses, allowing mobile devices to scan and connect easily.
+
+<img src="screenshot.jpg" width="400">
+
+## Requirements
+
+Python 3 and the following modules:
+
+```
+wxPython
+psutil
+qrcode[pil]
+```
+
+## Default Blacklist
+
+The following IP ranges are excluded by default.
+
+To change this, edit the `V4_BLACKLIST` and `V6_BLACKLIST` constants at the top of `qrip.py`.
+
+| address | IPv4 | IPv6 |
+| --- | --- | --- |
+| loopback | 127.0.0.0/8 | ::1 |
+| link-local | 169.254.0.0/16 | fe80::/10 |
+
 ## Data Format
 
 Data starts with the identifier `(QRIP)`, followed by an IP address.
@@ -54,10 +81,3 @@ If it’s hard to integrate with your server code, you can run it directly from 
     ```
     python3 qrip.py & python3 your_server.py
     ```
-
-## Blacklist
-
-| address | IPv4 | IPv6 |
-| --- | --- | --- |
-| loopback | 127.0.0.0/8 | ::1 |
-| link-local | 169.254.0.0/16 | fe80::/10 |

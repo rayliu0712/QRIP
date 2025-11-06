@@ -1,9 +1,9 @@
 import os
 import wx
-import socket
 import psutil
 import qrcode
 from io import BytesIO
+from socket import AF_INET, AF_INET6
 from ipaddress import IPv4Interface, IPv6Interface, IPv4Network, IPv6Network
 from multiprocessing import Process
 
@@ -206,20 +206,19 @@ def get_v4_v6_ifs() -> tuple[dict[str, IPv4Interface], dict[str, IPv6Interface]]
 
         for family, addr, mask, _, _ in snicaddr_list:
 
-            match family:
-                # MAC address
-                # case psutil.AF_LINK:
-                #     pass
+            if family == AF_INET:
+                v4if = IPv4Interface(f'{addr}/{mask}')
+                if is_allowed_v4(v4if):
+                    this_v4s.append(v4if)
 
-                case socket.AF_INET:
-                    v4if = IPv4Interface(f'{addr}/{mask}')
-                    if is_allowed_v4(v4if):
-                        this_v4s.append(v4if)
+            elif family == AF_INET6:
+                v6if = IPv6Interface(f'{addr}/64')
+                if is_allowed_v6(v6if):
+                    this_v6s.append(v6if)
 
-                case socket.AF_INET6:
-                    v6if = IPv6Interface(f'{addr}/64')
-                    if is_allowed_v6(v6if):
-                        this_v6s.append(v6if)
+            # family == psutil.AF_LINK  (MAC address)
+            # else:
+            #     pass
 
         this_v4s_len = len(this_v4s)
         if this_v4s_len == 1:
