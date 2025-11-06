@@ -16,11 +16,17 @@ psutil
 qrcode[pil]
 ```
 
+## IPv4 / IPv6 Support
+
+IPv4 and IPv6 pages are enabled by default.
+
+To disable either, edit the `V4_ENABLED` or `V6_ENABLED` boolean constants at the top of `qrip.py`.
+
 ## Default Blacklist
 
 The following IP ranges are excluded by default.
 
-To change this, edit the `V4_BLACKLIST` and `V6_BLACKLIST` constants at the top of `qrip.py`.
+To change this, edit the `V4_BLACKLIST` or `V6_BLACKLIST` constants at the top of `qrip.py`.
 
 | address | IPv4 | IPv6 |
 | --- | --- | --- |

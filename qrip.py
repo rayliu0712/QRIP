@@ -7,11 +7,13 @@ from socket import AF_INET, AF_INET6
 from ipaddress import IPv4Interface, IPv6Interface, IPv4Network, IPv6Network
 from multiprocessing import Process
 
+V4_ENABLED = True
 V4_BLACKLIST = [
     '127.0.0.0/8',
     '169.254.0.0/16'  # link-local address
 ]
 
+V6_ENABLED = True
 V6_BLACKLIST = [
     '::1',
     'fe80::/10'  # link-local address
@@ -35,10 +37,12 @@ class AppFrame(wx.Frame):
             wx.FONTWEIGHT_NORMAL
         )
         notebook = wx.Notebook(panel)
-        self.make_v4_page(notebook, font)
-        self.make_v6_page(notebook, font)
-        notebook.AddPage(self.v4_panel, 'IPv4')
-        notebook.AddPage(self.v6_panel, 'IPv6')
+        if V4_ENABLED:
+            self.make_v4_page(notebook, font)
+            notebook.AddPage(self.v4_panel, 'IPv4')
+        if V6_ENABLED:
+            self.make_v6_page(notebook, font)
+            notebook.AddPage(self.v6_panel, 'IPv6')
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
         button = wx.Button(panel, label='Refresh (F5)')
@@ -169,15 +173,17 @@ class AppFrame(wx.Frame):
     def refresh_ifs(self):
         self.v4_ifs, self.v6_ifs = get_v4_v6_ifs()
 
-        self.v4_choice.Clear()
-        self.v4_choice.Append(list(self.v4_ifs.keys()))
-        self.v4_choice.SetSelection(0)
-        self.make_v4_qr_prompt()
+        if V4_ENABLED:
+            self.v4_choice.Clear()
+            self.v4_choice.Append(list(self.v4_ifs.keys()))
+            self.v4_choice.SetSelection(0)
+            self.make_v4_qr_prompt()
 
-        self.v6_choice.Clear()
-        self.v6_choice.Append(list(self.v6_ifs.keys()))
-        self.v6_choice.SetSelection(0)
-        self.make_v6_qr_prompt()
+        if V6_ENABLED:
+            self.v6_choice.Clear()
+            self.v6_choice.Append(list(self.v6_ifs.keys()))
+            self.v6_choice.SetSelection(0)
+            self.make_v6_qr_prompt()
 
 
 def is_allowed_v4(v4if: IPv4Interface) -> bool:
