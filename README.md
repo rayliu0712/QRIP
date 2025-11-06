@@ -31,6 +31,8 @@ To change this, edit the `V4_BLACKLIST` and `V6_BLACKLIST` constants at the top 
 
 Data starts with the identifier `(QRIP)`, followed by an IP address.
 
+When using an IPv6 address in a URL, it must be enclosed in square brackets. QRIP already includes these brackets for you.
+
 | IPv4 Example | IPv6 Example |
 | --- | --- |
 | `(QRIP)123.45.67.89` | `(QRIP)[0123:4567:89ab:cdef::]` |
