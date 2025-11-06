@@ -18,7 +18,7 @@ qrcode[pil]
 
 ## IPv4 / IPv6 Support
 
-IPv4 and IPv6 pages are enabled by default.
+IPv4 and IPv6 pages are both enabled by default.
 
 To disable either, edit the `V4_ENABLED` or `V6_ENABLED` boolean constants at the top of `qrip.py`.
 
